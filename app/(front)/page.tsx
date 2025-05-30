@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_APP_NAME || "Next Amazona V2",
+  title: process.env.NEXT_PUBLIC_APP_NAME || "THREAD AURA",
   description:
     process.env.NEXT_PUBLIC_APP_DESC ||
     "Nextjs, Server components, Next auth, daisyui, zustand",
