@@ -5,6 +5,7 @@ import dbConnect from './dbConnect'
 import UserModel from './models/UserModel'
 import bcrypt from 'bcryptjs'
 import { getServerSession } from 'next-auth'
+import { NextRequest } from 'next/server'
 
 export const authOptions = {
   providers: [
@@ -19,7 +20,12 @@ export const authOptions = {
 
         const user = await UserModel.findOne({ email: credentials.email })
         if (user && await bcrypt.compare(credentials.password, user.password)) {
-          return user
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            isAdmin: user.isAdmin,
+          }
         }
         return null
       },
@@ -62,10 +68,23 @@ const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST } // For your /api/auth route
 
-
-export const auth = async (req: any) => {
-  const session = await getServerSession(authOptions)
-  return {
-    auth: session ? { user: session.user } : null,
+// Higher-order function that wraps API route handlers with authentication
+export const auth = (handler: (req: any, context?: any) => Promise<Response>) => {
+  return async (req: NextRequest, context?: any) => {
+    const session = await getServerSession(authOptions)
+    
+    // Create enhanced request object with auth info
+    const enhancedReq = {
+      ...req,
+      auth: session ? { user: session.user } : null,
+      json: () => req.json(),
+    }
+    
+    return handler(enhancedReq, context)
   }
+}
+
+// Utility function to get session (for use in components or other places)
+export const getSession = async () => {
+  return await getServerSession(authOptions)
 }
