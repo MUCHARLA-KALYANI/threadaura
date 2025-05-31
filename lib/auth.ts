@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import dbConnect from './dbConnect'
 import UserModel from './models/UserModel'
 import bcrypt from 'bcryptjs'
+import { getServerSession } from 'next-auth'
 
 export const authOptions = {
   providers: [
@@ -60,3 +61,11 @@ export const authOptions = {
 const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST } // For your /api/auth route
+
+
+export const auth = async (req: any) => {
+  const session = await getServerSession(authOptions)
+  return {
+    auth: session ? { user: session.user } : null,
+  }
+}
