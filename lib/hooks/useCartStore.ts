@@ -94,7 +94,8 @@ export default function useCartService() {
       cartStore.setState({
         items:[],
       })
-    }
+    },
+    init: () => cartStore.setState(initialState), 
   }
 }
 
