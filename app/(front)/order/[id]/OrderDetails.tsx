@@ -1,55 +1,80 @@
-'use client'
-import useSWRMutation from 'swr/mutation'
-import Link from 'next/link'
-import Image from 'next/image'
-import useSWR from 'swr'
-import { OrderItem } from '@/lib/models/OrderModel'
-import toast from 'react-hot-toast'
-import { useSession } from 'next-auth/react'
+"use client";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import useSWRMutation from "swr/mutation";
+import Link from "next/link";
+import Image from "next/image";
+import useSWR from "swr";
+import { OrderItem } from "@/lib/models/OrderModel";
+import toast from "react-hot-toast";
+import { useSession } from "next-auth/react";
 
 export default function OrderDetails({
   orderId,
   paypalClientId,
 }: {
-  orderId: string
-  paypalClientId: string
+  orderId: string;
+  paypalClientId: string;
 }) {
-  const { data: session } = useSession()
-  const { data, error } = useSWR(`/api/orders/${orderId}`)
+  const { data: session } = useSession();
+  function createPayPalOrder() {
+    return fetch(`/api/orders/${orderId}/create-paypal-order`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((order) => order.id);
+  }
+
+  function onApprovePayPalOrder(data: any) {
+    return fetch(`/api/orders/${orderId}/capture-paypal-order`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((orderData) => {
+        toast.success("Order paid successfully");
+      });
+  }
+  const { data, error } = useSWR(`/api/orders/${orderId}`);
 
   const { trigger: payOrder, isMutating: isPaying } = useSWRMutation(
     `/api/orders/${orderId}`,
     async (url) => {
       const res = await fetch(`${url}/pay`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       res.ok
-        ? toast.success('Order paid successfully')
-        : toast.error(data.message)
+        ? toast.success("Order paid successfully")
+        : toast.error(data.message);
     }
-  )
+  );
   const { trigger: deliverOrder, isMutating: isDelivering } = useSWRMutation(
     `/api/orders/${orderId}`,
     async (url) => {
       const res = await fetch(`${url}/deliver`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       res.ok
-        ? toast.success('Order delivered successfully')
-        : toast.error(data.message)
+        ? toast.success("Order delivered successfully")
+        : toast.error(data.message);
     }
-  )
+  );
 
-  if (error) return error.message
-  if (!data) return 'Loading...'
+  if (error) return error.message;
+  if (!data) return "Loading...";
 
   const {
     paymentMethod,
@@ -63,7 +88,7 @@ export default function OrderDetails({
     deliveredAt,
     isPaid,
     paidAt,
-  } = data
+  } = data;
   return (
     <div>
       <h1 className="text-2xl py-4">Order {orderId}</h1>
@@ -74,13 +99,11 @@ export default function OrderDetails({
               <h2 className="card-title">Shipping Address</h2>
               <p>{shippingAddress.fullName}</p>
               <p>
-                {shippingAddress.address}, {shippingAddress.city},{' '}
-                {shippingAddress.postalCode}, {shippingAddress.country}{' '}
+                {shippingAddress.address}, {shippingAddress.city},{" "}
+                {shippingAddress.postalCode}, {shippingAddress.country}{" "}
               </p>
               {isDelivered ? (
-                <div className="text-success">
-                  Delivered at {deliveredAt}
-                </div>
+                <div className="text-success">Delivered at {deliveredAt}</div>
               ) : (
                 <div className="text-error">Not Delivered</div>
               )}
@@ -165,11 +188,23 @@ export default function OrderDetails({
                     <div>${totalPrice}</div>
                   </div>
                 </li>
+                {!isPaid && paymentMethod === "PayPal" && (
+                  <li>
+                    <PayPalScriptProvider
+                      options={{ clientId: paypalClientId }}
+                    >
+                      <PayPalButtons
+                        createOrder={createPayPalOrder}
+                        onApprove={onApprovePayPalOrder}
+                      />
+                    </PayPalScriptProvider>
+                  </li>
+                )}
               </ul>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
